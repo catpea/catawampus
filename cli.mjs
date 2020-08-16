@@ -6,9 +6,16 @@ import api from './api.mjs';
 async function main(){
 
   const defaults = {
+
+    unit: 'rem',
+    breakpoints: [576,  768, 992, 1200, 1400, 1600],
+    containers:  [540,  720, 960, 1140, 1320, 1400],
+
     destination: 'docs',
     template: 'main',
+
     locations: {},
+
     sorting: {
       'order': [ 'custom-properties', 'dollar-variables', 'declarations', 'rules', 'at-rules' ],
       'properties-order': 'alphabetical',

@@ -7,147 +7,49 @@ import precss  from 'precss';
 import sorting  from 'postcss-sorting';
 import autoprefixer  from 'autoprefixer';
 import cloneDeep from 'lodash/cloneDeep.js';
-import merge from 'lodash/merge.js';
 export default main;
 
 async function main(options){
-
-  const {css:precssCss} = await postcss().process(await calculate(options), {parser:postcssJs, from:undefined });
-
-  console.log(css);
-
-  // const {css:unformattedCss} = await postcss([ precss({}), autoprefixer(), sorting(sortingOptions) ]).process(precssCss,{from:undefined});
-  // const css = prettier.format(unformattedCss, { parser: "css" });
-  // const stylesheetLocation = path.resolve(path.join(options.website.directory, options.website.stylesheet));
-  // const stylesheetOptions = {
-  //   meta: {
-  //     title: 'CSS Stylesheet',
-  //     timestamp: moment((new Date())).tz("America/Detroit").format("MMMM Do YYYY, h:mm:ss a z"),
-  //     author: options.author,
-  //     canonical: options.canonical,
-  //   },
-  //   data:{
-  //     css
-  //   }
-  // };
-  // const stylesheetTemplate = handlebars.compile(fs.readFileSync(path.resolve(path.join(options.website.template.path, options.website.template.stylesheet))).toString());
-  // const stylesheet = stylesheetTemplate(stylesheetOptions);
-  // //console.log(stylesheet);
-  // fs.ensureDirSync(path.dirname(stylesheetLocation));
-  // fs.writeFileSync(stylesheetLocation, stylesheet);
-
+  const {css:precssCss} = await postcss().process(await buildTree(options), {parser:postcssJs, from:undefined });
+  const {css:unformattedCss} = await postcss([ precss({}), autoprefixer(), sorting(options.sorting) ]).process(precssCss,{from:undefined});
+  const css = prettier.format(unformattedCss, { parser: "css" });
+  fs.ensureDirSync(path.dirname(options.locations.stylesheet));
+  fs.writeFileSync(options.locations.stylesheet, css);
 }
 
-
-
-
-function rem(str){return str+'rem'};
-
-function calculate(setup){
-
-  const base = cloneDeep(setup.styles); // grab the styles that are ready to go.
+function dig(path, root){
+  let destination = root;
+  for(let fragment of path){
+    if(!destination[fragment]) destination[fragment] = {}; // create path if missing
+    destination = destination[fragment]; // descend down the path.
+  }
+  return destination; // return latest know
+};
+function buildTree(setup){
+  const base = cloneDeep(setup.style); // grab the styles that are ready to go.
   const responsive = {}; // this is the destination where we will calculate based on breakpoints.
-
-  // setup.responsive.forEach((item)=>{
-  //    let location = base;
-  //   for(let fragment of item.path){
-  //     if(!location[fragment]) location[fragment] = {};
-  //     location = location[fragment];
-  //   }
-  //   for(let property of item.property){
-  //     location[property.name] = property.from + property.unit;
-  //   }
-  // });
-
-  // setup.breakpoints.forEach((breakpointWidth,index)=>{
-  //   const containerWidth = setup.container[index];
-  //   responsive[`@media (min-width: ${breakpointWidth}px)`] = {'body > *':{maxWidth: `${containerWidth}px`}};
-  // })
-
-  // setup.breakpoints.forEach((breakpointWidth,index)=>{
-  //   const containerWidth = setup.container[index];
-  //   responsive[`@media (min-width: ${breakpointWidth}px)`] = {'body > *':{maxWidth: `${containerWidth}px`}};
-  // })
-
-  // setup.responsive.forEach((item)=>{
-  //    let location = base;
-  //   for(let fragment of item.path){
-  //     if(!location[fragment]) location[fragment] = {};
-  //     location = location[fragment];
-  //   }
-  //   for(let property of item.property){
-  //     location[property.name] = property.from + property.unit;
-  //   }
-  // });
-
-  // setup.responsive.forEach((item)=>{
-  //   setup.breakpoints.forEach((breakpointWidth,increase)=>{
-  //
-  //     let location = responsive[`@media (min-width: ${breakpointWidth}px)`]
-  //     for(let fragment of item.path){
-  //       if(!location[fragment]) location[fragment] = {};
-  //       location = location[fragment];
-  //     }
-  //     for(let property of item.property){
-  //       let fraction = (property.to - property.from) / setup.breakpoints.length;
-  //       location[property.name] = (property.from + (fraction*(increase+1))).toFixed(2) + property.unit;
-  //     }
-  //   })
-  // })
-
-  const response = merge({}, base, responsive);
-  return response;
-}
-
-
-
-
-
-
-
-
-
-
-function calculate2(setup){
-  const base = merge({}, setup.styles);
-  const responsive = {};
-
-  setup.breakpoints.forEach((breakpointWidth,index)=>{
-    const containerWidth = setup.container[index];
-    responsive[`@media (min-width: ${breakpointWidth}px)`] = {'body > *':{maxWidth: `${containerWidth}px`}};
-  })
-
-  setup.breakpoints.forEach((breakpointWidth,index)=>{
-    const containerWidth = setup.container[index];
-    responsive[`@media (min-width: ${breakpointWidth}px)`] = {'body > *':{maxWidth: `${containerWidth}px`}};
-  })
-
-  setup.responsive.forEach((item)=>{
-     let location = base;
-    for(let fragment of item.path){
-      if(!location[fragment]) location[fragment] = {};
-      location = location[fragment];
-    }
-    for(let property of item.property){
-      location[property.name] = property.from + property.unit;
-    }
-  });
-
-  setup.responsive.forEach((item)=>{
-    setup.breakpoints.forEach((breakpointWidth,increase)=>{
-
-      let location = responsive[`@media (min-width: ${breakpointWidth}px)`]
-      for(let fragment of item.path){
-        if(!location[fragment]) location[fragment] = {};
-        location = location[fragment];
+  // uses the responsive information to apply defaults to the main/default section of the stylesheet.
+  for(let item of setup.responsive){
+     let location = dig(item.id, base);
+     for (const [key, value] of Object.entries(item).filter(([key, value])=>key!=='id')) {
+       const [from, to, unit] = value;
+       location[key] = from + (unit||setup.unit);
+     }
+  };
+  // process the media queries with adaptive fractional values
+  for(let item of setup.responsive){
+    let breakpointIndex = 1;
+    for(let breakpointWidth of setup.breakpoints){
+      let path = [`@media (min-width: ${breakpointWidth}px)`].concat(item.id);
+      let location = dig(path, responsive);
+      for (const [key, value] of Object.entries(item).filter(([key, value])=>key!=='id')) {
+        const [from, to, unit] = value;
+        let fraction = (to - from) / setup.breakpoints.length;
+        let increment = fraction * (breakpointIndex);
+        location[key] = (from + increment).toFixed(2) + (unit||setup.unit);
       }
-      for(let property of item.property){
-        let fraction = (property.to - property.from) / setup.breakpoints.length;
-        location[property.name] = (property.from + (fraction*(increase+1))).toFixed(2) + property.unit;
-      }
-    })
-  })
-
-  const response = merge({}, base, responsive);
-  return response;
+      breakpointIndex++;
+    }
+  }
+  return Object.assign({}, base, responsive);
 }
