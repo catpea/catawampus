@@ -16,4 +16,59 @@ npm i -g catawampus
 
 ## Usage
 
-Run ```catawampus``` in template/website directory to generate the CSS
+Create a ```catawampus.mjs``` in the root of your website project.
+
+```JavaScript
+
+// configuration https://github.com/catpea/catawampus#readme
+
+import {inspect} from 'util';
+
+const configuration = {
+
+  destination: 'docs',
+  template: 'main',
+  color: 'main',
+
+  colors:[
+    {
+      id:'main',
+      color: {
+        primary: '',
+        secondary: '',
+      },
+      background: {
+        primary: [],
+        secondary: [],
+      },
+    }
+  ],
+
+  style: {
+    article: {
+      header: {
+      },
+      section: {
+      },
+      article: {
+      },
+      footer: {
+      },
+    }
+  },
+
+  responsive: [
+    {id: ['body'], fontSize: [1, 1.5]},
+    {id: ['img'], width: [100, 75, '%']},
+  ],
+
+}
+
+export default async function () {
+  return configuration;
+}
+
+
+```
+
+Run ```catawampus``` in website directory to generate the CSS
