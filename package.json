@@ -1,6 +1,6 @@
 {
   "name": "catawampus",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Classless Responsive CSS Generator for Semantic HTML",
   "main": "api.mjs",
   "bin": {
