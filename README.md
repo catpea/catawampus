@@ -1,4 +1,4 @@
-# catawampus
+# Catawampus CSS: Becasue CSS things go bork and hork in the night.
 Classless Responsive CSS Generator for Semantic HTML
 
 ## Links
